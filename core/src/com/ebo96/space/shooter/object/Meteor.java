@@ -12,43 +12,60 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.ebo96.space.shooter.game.GameInfo;
 
-public class Bullet extends Sprite {
+import java.util.Random;
+
+public class Meteor extends Sprite {
 
     //Game world
     private World world;
 
-    //Bullet body
+    //Meteor body
     private Body body;
 
-    //Bullet location
+    //Meteor location on screen
     private Vector2 location;
 
-    //Bullet velocity
-    private Vector2 velocity;
+    //Meteor velocity. Same as bullet velocity
+    private float velocity;
 
-    public Bullet(World world, Ship ship) {
-        super(new Texture("bullet.png"));
-        this.world = world;
+    public boolean shouldDraw = true;
 
-        //Set bullet location
-        location = new Vector2(ship.getX() + ship.getMiddle().x, ship.getY() + (ship.getHeight() * 0.8f));
+    public Meteor(Bullet bullet) {
+        super(new Texture("meteor.png"));
+
+        this.world = bullet.getWorld();
+
+        //Set position
+        location = new Vector2(randomizeX(bullet.getX()), GameInfo.HEIGHT);
+
+        //Set meteor position
         setPosition(location.x, location.y);
 
-        //Set bullet velocity
-        velocity = new Vector2(0, GameInfo.BULLET_V);
-        //Create body for bullet
+        velocity = -bullet.getVelocity() * 0.7f;
+
         createBody();
     }
 
     @Override
     public void draw(Batch batch) {
-        body.getPosition().set(location.x, location.y += velocity.y);
-        ((Bullet) body.getUserData()).setPosition(location.x, location.y += velocity.y);
-        super.draw(batch);
+        if (shouldDraw) {
+            setPosition(location.x, location.y += velocity);
+            body.getPosition().set(location.x, location.y += velocity);
+            super.draw(batch);
+        }
+    }
+
+    private float randomizeX(float x) {
+        float min = 0.5f;
+        float max = 2.5f;
+
+        Random random = new Random();
+
+        return x * random.nextFloat() * (max - min) + min;
     }
 
     private void createBody() {
-        //Ship body definition
+
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(location);
@@ -69,17 +86,5 @@ public class Bullet extends Sprite {
         body.setUserData(this);
 
         shape.dispose();
-    }
-
-    public World getWorld() {
-        return world;
-    }
-
-    public float getVelocity() {
-        return velocity.y;
-    }
-
-    public Body getBody() {
-        return body;
     }
 }

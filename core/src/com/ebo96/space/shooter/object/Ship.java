@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.ebo96.space.shooter.game.GameInfo;
+import com.ebo96.space.shooter.game.MeteorManager;
 
 import java.util.ArrayList;
 
@@ -29,12 +31,15 @@ public class Ship extends Sprite {
 
     //Last fire
     private long lastFire;
-    private final long fireSpace = 100L;
+    private final long fireSpace = 200L;
 
     //Fired bullets
     private ArrayList<Bullet> firedBullets = new ArrayList<Bullet>();
 
-    public Ship(World world) {
+    //Meteor manager
+    private MeteorManager meteorManager;
+
+    public Ship(SpriteBatch batch, World world) {
 
         //Load ship texture
         super(new Texture("ship.png"));
@@ -49,10 +54,12 @@ public class Ship extends Sprite {
         createBody();
         //Set last fire time
         lastFire = System.currentTimeMillis();
+        //Setup meteor manager
+        meteorManager = new MeteorManager(batch);
     }
 
     /**
-     * Update ship position on screen and draw
+     * Update ship position on screen and createAndDraw
      */
     @Override
     public void draw(Batch batch) {
@@ -66,11 +73,16 @@ public class Ship extends Sprite {
             if (Math.abs(x - location.x) <= getWidth() * 1.4 && Math.abs(y - location.y) <= getHeight() * 1.4) {
                 location.x = x;
                 location.y = y;
-            }
 
-            if (System.currentTimeMillis() - lastFire > fireSpace) {
-                lastFire = System.currentTimeMillis();
-                firedBullets.add(new Bullet(world, Ship.this));
+                if (System.currentTimeMillis() - lastFire > fireSpace) {
+                    lastFire = System.currentTimeMillis();
+                    //Create new bullet
+                    Bullet bullet = new Bullet(world, Ship.this);
+                    //Add bullet to magazine
+                    firedBullets.add(bullet);
+                    //Draw meteor
+                    meteorManager.create(bullet);
+                }
             }
 
         }
@@ -88,11 +100,15 @@ public class Ship extends Sprite {
                 bullet.draw(batch);
             else {
                 firedBullets.remove(index);
+                world.destroyBody(bullet.getBody());
                 index--;
             }
 
             index++;
         }
+
+        //Draw meteors on screen
+        meteorManager.draw();
 
         //Draw ship on screen
         super.draw(batch);
