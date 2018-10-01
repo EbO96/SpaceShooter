@@ -30,38 +30,32 @@ public class Meteor extends Sprite {
 
     public boolean shouldDraw = true;
 
-    public Meteor(Bullet bullet) {
+    private Vector2 middle;
+
+    public Meteor(World world) {
         super(new Texture("meteor.png"));
-
-        this.world = bullet.getWorld();
-
-        //Set position
-        location = new Vector2(randomizeX(bullet.getX()), GameInfo.HEIGHT);
-
-        //Set meteor position
+        this.world = world;
+        location = new Vector2(randomizeX() / GameInfo.PPM, GameInfo.HEIGHT / GameInfo.PPM);
         setPosition(location.x, location.y);
 
-        velocity = -bullet.getVelocity() * 0.7f;
+        //Calculate middle of ship
+        middle = new Vector2(getWidth() / 2f / GameInfo.PPM, getHeight() / 2f / GameInfo.PPM);
 
         createBody();
     }
 
     @Override
     public void draw(Batch batch) {
-        if (shouldDraw) {
-            setPosition(location.x, location.y += velocity);
-            body.getPosition().set(location.x, location.y += velocity);
-            super.draw(batch);
-        }
+        float meteorX = (body.getPosition().x * GameInfo.PPM) - (middle.x * GameInfo.PPM);
+        float meteorY = (body.getPosition().y * GameInfo.PPM) - (middle.y * GameInfo.PPM);
+        setPosition(meteorX, meteorY);
+        super.draw(batch);
+
     }
 
-    private float randomizeX(float x) {
-        float min = 0.5f;
-        float max = 2.5f;
-
+    private float randomizeX() {
         Random random = new Random();
-
-        return x * random.nextFloat() * (max - min) + min;
+        return random.nextFloat() * (GameInfo.WIDTH);
     }
 
     private void createBody() {
@@ -71,20 +65,25 @@ public class Meteor extends Sprite {
         bodyDef.position.set(location);
 
         body = world.createBody(bodyDef);
+        body.setGravityScale(2f);
 
         PolygonShape shape = new PolygonShape();
-        shape.setAsBox(getWidth() / 2, getHeight() / 2);
+        shape.setAsBox(getWidth() / 2 / GameInfo.PPM, getHeight() / 2 / GameInfo.PPM);
 
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.shape = shape;
-        fixtureDef.density = 0.5f;
-        fixtureDef.friction = 0.1f;
-        fixtureDef.restitution = 0.2f;
+        fixtureDef.density = 1f;
+        fixtureDef.friction = 0f;
+        fixtureDef.restitution = 0.5f;
 
         Fixture fixture = body.createFixture(fixtureDef);
 
         body.setUserData(this);
 
         shape.dispose();
+    }
+
+    public Body getBody() {
+        return body;
     }
 }

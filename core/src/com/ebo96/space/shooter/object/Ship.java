@@ -8,14 +8,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Filter;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.ebo96.space.shooter.game.GameInfo;
-import com.ebo96.space.shooter.game.MeteorManager;
-
-import java.util.ArrayList;
 
 public class Ship extends Sprite {
 
@@ -29,33 +27,19 @@ public class Ship extends Sprite {
     private Vector2 location;
     private Vector2 middle; //Ship middle
 
-    //Last fire
-    private long lastFire;
-    private final long fireSpace = 200L;
-
-    //Fired bullets
-    private ArrayList<Bullet> firedBullets = new ArrayList<Bullet>();
-
-    //Meteor manager
-    private MeteorManager meteorManager;
-
     public Ship(SpriteBatch batch, World world) {
 
         //Load ship texture
         super(new Texture("ship.png"));
         this.world = world;
         //Set start ship position on screen
-        location = new Vector2((GameInfo.WIDTH / 2) - (getWidth() / 2), GameInfo.HEIGHT / 4);
+        location = new Vector2((GameInfo.WIDTH / 2) / GameInfo.PPM - (getWidth() / 2) / GameInfo.PPM, getHeight() / 2 / GameInfo.PPM);
         //Calculate middle of ship
-        middle = new Vector2(getWidth() / 2f, getHeight() / 2f);
+        middle = new Vector2(getWidth() / 2f / GameInfo.PPM, getHeight() / 2f / GameInfo.PPM);
         //Set ship position on screen
         setPosition(location.x, location.y);
         //Create ship body
         createBody();
-        //Set last fire time
-        lastFire = System.currentTimeMillis();
-        //Setup meteor manager
-        meteorManager = new MeteorManager(batch);
     }
 
     /**
@@ -69,46 +53,27 @@ public class Ship extends Sprite {
             float x = Gdx.input.getX() - middle.x;
             float y = GameInfo.HEIGHT - Gdx.input.getY() - middle.y;
 
-            //Check if touch is on ship (40% margin is allowed)
-            if (Math.abs(x - location.x) <= getWidth() * 1.4 && Math.abs(y - location.y) <= getHeight() * 1.4) {
-                location.x = x;
-                location.y = y;
+            location.x = x / GameInfo.PPM;
+            location.y = y / GameInfo.PPM;
 
-                if (System.currentTimeMillis() - lastFire > fireSpace) {
-                    lastFire = System.currentTimeMillis();
-                    //Create new bullet
-                    Bullet bullet = new Bullet(world, Ship.this);
-                    //Add bullet to magazine
-                    firedBullets.add(bullet);
-                    //Draw meteor
-                    meteorManager.create(bullet);
-                }
+            if (x < GameInfo.WIDTH / 2 && body.getPosition().x > middle.x) { // First half Screen ==> move backward
+                body.setLinearVelocity(-10, 0);
+            } else if (x > GameInfo.WIDTH / 2 && (body.getPosition().x * GameInfo.PPM) < GameInfo.WIDTH) { // Second half Screen ==> move forward
+                body.setLinearVelocity(10, 0);
+            } else {
+                body.setLinearVelocity(new Vector2(0, 0));
             }
 
+
+        } else {
+            body.setLinearVelocity(new Vector2(0, 0));
         }
 
-        //Draw ship on screen
-        setPosition(location.x, location.y);
+        float shipX = (body.getPosition().x * GameInfo.PPM) - (middle.x * GameInfo.PPM);
+        float shipY = (body.getPosition().y * GameInfo.PPM) - (middle.y * GameInfo.PPM);
 
-        int index = 0;
-
-        //Draw bullets on screen
-        while (index < firedBullets.size()) {
-            Bullet bullet = firedBullets.get(index);
-
-            if (bullet.getY() <= GameInfo.HEIGHT)
-                bullet.draw(batch);
-            else {
-                firedBullets.remove(index);
-                world.destroyBody(bullet.getBody());
-                index--;
-            }
-
-            index++;
-        }
-
-        //Draw meteors on screen
-        meteorManager.draw();
+        Gdx.app.log("ship", "ship X = " + shipX + " ship Y = " + shipY);
+        setPosition(shipX, shipY);
 
         //Draw ship on screen
         super.draw(batch);
@@ -122,6 +87,7 @@ public class Ship extends Sprite {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(location);
+        bodyDef.gravityScale = 0;
 
         body = world.createBody(bodyDef);
 
@@ -130,9 +96,9 @@ public class Ship extends Sprite {
 
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.shape = shape;
-        fixtureDef.density = 0.5f;
-        fixtureDef.friction = 0.1f;
-        fixtureDef.restitution = 0.2f;
+        fixtureDef.density = 1f;
+        fixtureDef.friction = 0f;
+        fixtureDef.restitution = 0f;
 
         Fixture fixture = body.createFixture(fixtureDef);
 
